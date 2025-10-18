@@ -1,6 +1,5 @@
 import express from 'express';
 import { createProxyMiddleware, responseInterceptor } from 'http-proxy-middleware';
-import serverless from 'serverless-http';
 
 // CORS setup
 const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || '*';
@@ -141,4 +140,51 @@ app.use((req, res) => {
   </body></html>`);
 });
 
-export const handler = serverless(app);
+export async function handler(event, context) {
+  return new Promise((resolve, reject) => {
+    const req = {
+      method: event.httpMethod,
+      url: event.rawPath + (event.rawQueryString ? `?${event.rawQueryString}` : ''),
+      headers: event.headers || {},
+      body: event.body,
+    };
+
+    const res = {
+      statusCode: 200,
+      headers: {},
+      body: '',
+      setHeader: function(key, value) {
+        this.headers[key] = value;
+      },
+      removeHeader: function(key) {
+        delete this.headers[key];
+      },
+      send: function(data) {
+        this.body = data;
+        resolve({
+          statusCode: this.statusCode,
+          headers: this.headers,
+          body: this.body,
+        });
+      },
+      json: function(data) {
+        this.setHeader('Content-Type', 'application/json');
+        this.send(JSON.stringify(data));
+      },
+      status: function(code) {
+        this.statusCode = code;
+        return this;
+      },
+      type: function(type) {
+        this.setHeader('Content-Type', type);
+        return this;
+      },
+      sendStatus: function(code) {
+        this.statusCode = code;
+        this.send('');
+      },
+    };
+
+    app(req, res);
+  });
+}
