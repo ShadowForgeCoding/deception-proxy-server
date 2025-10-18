@@ -87,6 +87,7 @@ app.use((req, res, next) => {
 app.use('/proxy', createProxyMiddleware({
   changeOrigin: true,
   selfHandleResponse: true,
+  logLevel: 'debug',
   router: (req) => {
     const target = req.query.target || req.headers['x-target-url'];
     return target ? new URL(target).origin : 'http://localhost';
@@ -116,7 +117,11 @@ app.use('/proxy', createProxyMiddleware({
     res.setHeader('cross-origin-opener-policy', 'unsafe-none');
     res.setHeader('x-content-type-options', 'nosniff');
     return responseBuffer;
-  })
+  }),
+  onError: (err, req, res) => {
+    console.error('Proxy error:', err);
+    res.status(502).send('Bad Gateway: Proxy error');
+  }
 }));
 
 // Fallback: serve info page for any unmatched route
@@ -136,4 +141,7 @@ app.use((req, res) => {
   </body></html>`);
 });
 
-export const handler = serverless(app);
+export const handler = serverless(app, {
+  basePath: '/.netlify/functions/proxy',
+  provider: 'netlify'
+});
