@@ -141,7 +141,4 @@ app.use((req, res) => {
   </body></html>`);
 });
 
-export const handler = serverless(app, {
-  basePath: '/.netlify/functions/proxy',
-  provider: 'netlify'
-});
+export const handler = serverless(app);
